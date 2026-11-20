@@ -1,0 +1,325 @@
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPEKA - Sistem Informasi Piket Kelas</title>
+    <!-- Memuat Tailwind CSS untuk tata letak responsif dan estetika modern -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat Font Inter dari Google Fonts agar tipografi bersih dan mudah dibaca -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        pastelBlue: '#E8EEF9',
+                        pastelBlueText: '#1E3A8A',
+                        pastelMint: '#E3F3E8',
+                        pastelMintHover: '#D1EAD9',
+                        pastelMintText: '#166534',
+                        pastelPeach: '#FDE8E2',
+                        pastelPeachText: '#9A3412',
+                        pastelAmber: '#FEF3C7',
+                        pastelAmberText: '#92400E',
+                        appBg: '#F8FAFC',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Animasi transisi halus untuk pergantian tab dan notifikasi */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.25s ease-out forwards;
+        }
+        /* Animasi getar halus saat password admin salah */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .animate-shake {
+            animation: shake 0.35s ease-in-out;
+        }
+        /* Kustomisasi scrollbar agar tetap rapi */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 9999px;
+        }
+
+        /* CSS Khusus Cetak / Simpan Laporan ke PDF (@media print) */
+        @media print {
+            body {
+                background-color: #FFFFFF !important;
+                color: #0F172A !important;
+                font-size: 11pt !important;
+            }
+            .no-print, nav, footer, #toastContainer, #customModal, #adminLoginModal, #changePasswordModal, #editRiwayatModal, #roleBar, #mainHeader, #view-beranda, #view-jadwal {
+                display: none !important;
+            }
+            #mainContainer {
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #view-riwayat {
+                display: block !important;
+            }
+            #riwayatCardWrapper {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+            }
+            #printHeaderKop, #printSignatureSection {
+                display: block !important;
+            }
+            #printSignatureSection {
+                display: grid !important;
+            }
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+            th, td {
+                border: 1px solid #94A3B8 !important;
+                padding: 8px 10px !important;
+                font-size: 10pt !important;
+            }
+            th {
+                background-color: #E8EEF9 !important;
+                color: #1E3A8A !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .print-badge {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body class="bg-appBg text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Notifikasi / Umpan Balik Pengguna (Menggantikan alert() standar) -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full px-4 sm:px-0 pointer-events-none"></div>
+
+    <!-- Kontainer Utama Aplikasi -->
+    <div id="mainContainer" class="max-w-4xl w-full mx-auto px-4 py-6 sm:py-8 flex-grow">
+
+        <!-- Baris Kontrol Peran Pengguna (Mitigasi Risiko LKPD 1: Autentikasi Mode Admin) -->
+        <div id="roleBar" class="no-print flex flex-wrap items-center justify-between gap-3 mb-4 bg-white border border-slate-200/80 rounded-2xl px-4 py-2.5 shadow-sm">
+            <div class="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span>Kelas <strong>XII Reguler 7</strong> &bull; Kelompok 3</span>
+            </div>
+            
+            <!-- Status Peran Aktif & Tombol Login / Keluar Admin -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Tampilan saat Mode Siswa (Default) -->
+                <div id="studentRoleControls" class="flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/80">
+                        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        <span>Mode Siswa</span>
+                    </span>
+                    <button type="button" onclick="bukaModalLoginAdmin()" 
+                        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-pastelBlue hover:bg-blue-200/80 text-pastelBlueText border border-blue-200 transition-all shadow-2xs">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                        <span>Masuk Mode Admin</span>
+                    </button>
+                </div>
+
+                <!-- Tampilan saat Sudah Login Mode Admin (Ketua Kelas) -->
+                <div id="adminRoleControls" class="hidden flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-pastelMint text-pastelMintText border border-emerald-200">
+                        <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        <span>Mode Admin (Ketua Kelas)</span>
+                    </span>
+                    <button type="button" onclick="bukaModalUbahPassword()" 
+                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                        </svg>
+                        <span>Ubah Password</span>
+                    </button>
+                    <button type="button" onclick="logoutAdmin()" 
+                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        <span>Keluar Admin</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Header Utama Sesuai Wireframe LKPD 2 -->
+        <header id="mainHeader" class="no-print bg-pastelBlue rounded-2xl px-6 py-7 text-center shadow-sm border border-blue-100 mb-6">
+            <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-pastelBlueText">SIPEKA</h1>
+            <p class="text-sm sm:text-base font-medium text-slate-700 mt-1.5">Sistem Informasi Piket Kelas</p>
+        </header>
+
+        <!-- Navigasi Utama (3 Layar Rancangan Wireframe LKPD 2) -->
+        <nav aria-label="Menu Utama" class="no-print grid grid-cols-3 gap-2 bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-sm mb-6">
+            <button type="button" id="tab-beranda" onclick="switchTab('beranda')" 
+                class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-pastelBlue text-pastelBlueText">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                </svg>
+                <span>Piket Hari Ini</span>
+            </button>
+            <button type="button" id="tab-jadwal" onclick="switchTab('jadwal')" 
+                class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span>Jadwal Piket</span>
+            </button>
+            <button type="button" id="tab-riwayat" onclick="switchTab('riwayat')" 
+                class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span>Riwayat & Rekap</span>
+            </button>
+        </nav>
+
+        <!-- =====================================================================
+             LAYAR 1: BERANDA & PIKET HARI INI (Sesuai Sketsa Utama Wireframe)
+             ===================================================================== -->
+        <main id="view-beranda" class="view-section animate-fade-in space-y-5">
+            
+            <!-- Pemilih Hari Piket -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Pilih Hari Piket</span>
+                    <p class="text-xs text-slate-500">Lihat petugas dan perbarui status tugas kebersihan</p>
+                </div>
+                <div class="flex flex-wrap gap-1.5" id="daySelectorButtons">
+                    <!-- Tombol hari Senin - Jumat dirender oleh JavaScript -->
+                </div>
+            </div>
+
+            <!-- Kartu 1: Jadwal Piket Hari Ini (Sesuai Wireframe Halaman 6 LKPD 2) -->
+            <section class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+                <div class="flex flex-wrap items-start justify-between gap-2 mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Jadwal Piket Hari Ini</h2>
+                        <p id="displayTanggal" class="text-sm text-slate-500 mt-1">Senin, 3 November 2026</p>
+                    </div>
+                    <span id="badgeStatusHari" class="px-3 py-1 rounded-full text-xs font-semibold bg-pastelPeach text-pastelPeachText">
+                        Belum Piket
+                    </span>
+                </div>
+
+                <!-- Daftar Nama Petugas Piket -->
+                <div class="mt-4">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5">Petugas Piket Bertugas:</p>
+                    <ul id="listPetugasHariIni" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <!-- Daftar petugas dirender di sini -->
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Kartu 2: Daftar Tugas Kebersihan (Sesuai Wireframe Halaman 6 LKPD 2) -->
+            <section class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Daftar Tugas</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Centang tugas yang sudah dikerjakan oleh petugas</p>
+                    </div>
+                    <span id="progressCounter" class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                        0 / 4 Selesai
+                    </span>
+                </div>
+
+                <!-- Checklist Tugas Interaktif -->
+                <div id="listTugasHariIni" class="space-y-2.5 mb-5">
+                    <!-- Daftar tugas dirender di sini -->
+                </div>
+
+                <!-- Input Keterangan / Catatan Tambahan (Tersedia untuk Siswa & Ketua Kelas sesuai Struktur Data LKPD 2) -->
+                <div class="mb-5 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <label for="inputKeterangan" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Keterangan / Catatan Pelaksanaan Piket (Opsional):
+                    </label>
+                    <input type="text" id="inputKeterangan" placeholder="Contoh: Kelas bersih, sampah sudah dibuang ke TPS, semua hadir..." 
+                        class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Tombol Utama Sesuai Wireframe: "Tandai Tugas Selesai" -->
+                <div class="flex flex-col sm:flex-row items-center justify-end gap-3">
+                    <button type="button" onclick="resetTugasHariIni()" 
+                        class="w-full sm:w-auto px-4 py-3 rounded-xl text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                        Ulangi Status
+                    </button>
+                    <button type="button" id="btnTandaiSelesai" onclick="tandaiSemuaSelesai()" 
+                        class="w-full sm:w-auto px-7 py-3.5 rounded-2xl text-base font-bold bg-pastelMint hover:bg-pastelMintHover text-pastelMintText shadow-sm border border-emerald-200/80 transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Tandai Tugas Selesai</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- =====================================================================
+             LAYAR 2: JADWAL PIKET MINGGUAN & KELOLA DATA (Ketua Kelas)
+             ===================================================================== -->
+        <section id="view-jadwal" class="view-section hidden animate-fade-in space-y-5">
+            
+            <!-- Banner Informasi Akses Peran Siswa (Terkunci untuk Pengubahan Jadwal) -->
+            <div id="infoAksesSiswa" class="bg-blue-50 border border-blue-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                    <div class="text-xs sm:text-sm text-blue-900">
+                        <p class="font-semibold">Pengaturan Jadwal Terkunci (Mode Siswa)</p>
+                        <p class="text-blue-700 mt-0.5">Untuk mencegah perubahan data jadwal sembarangan, hanya <strong>Admin (Ketua Kelas)</strong> yang dapat menambah atau mengubah daftar petugas &amp; tugas piket.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="bukaModalLoginAdmin()" 
+                    class="shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition-colors">
+                    Masuk Mode Admin
+                </button>
+            </div>
+
+            <!-- Form Pengelolaan Jadwal (Hanya aktif setelah Login Mode Admin) -->
+            <div id="panelKelolaJadwal" class="hidden bg-white rounded-2xl p-6 border border-emerald-200 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-pastelMint text-pastelMintText uppercase">Akses Admin (Ketua Kelas)</span>
+                        <h2 class="text-lg font-bold text-slate-900 mt-1">Atur Jadwal & Petugas Piket</h2>
+                    </div>
+                </div>
+
+                <form id="formEditJadwal" onsubmit="simpanPerubahanJadwal(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="editHari" class="block text-xs font-semibold text-slate-700 mb-1">Pilih Hari <span class="text-red-500">*</span></label>
+                            <select id="editHari" onchange="muatDataFormEdit()" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 foc
