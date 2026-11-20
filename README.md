@@ -1,1 +1,0 @@
-# Sipeka-kelas
